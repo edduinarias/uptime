@@ -1,0 +1,244 @@
+---
+
+- block: 
+    - name: "[ Linux ] Consultar si la Maquina es Fisica o Virtual"
+      ansible.builtin.script: files/getServerType.sh linux  
+      args:
+        executable: /bin/bash
+      register: tiposervidor_result
+      failed_when: false
+      changed_when: tiposervidor_result.rc in [0, 1]
+      when: 
+        - ansible_facts['os_family'] in ['Redhat','Debian', 'Suse', 'AlmaLinux', 'RedHat' ]
+
+    - name: "[ Linux ] Consultar el Serial de La maquina"
+      ansible.builtin.script: files/getSerial.sh linux
+      args:
+        executable: /bin/bash
+      register: serial_result
+      failed_when: false
+      changed_when: serial_result.rc in [0, 1]
+      when: 
+        - ansible_facts['os_family'] in ['Redhat','Debian', 'Suse', 'AlmaLinux', 'RedHat' ]
+
+    - name: "[ Linux ] Consultar el Modelo de La maquina"
+      ansible.builtin.script: files/getModelServer.sh linux
+      args:
+        executable: /bin/bash
+      register: model_result
+      failed_when: false
+      changed_when: model_result.rc in [0, 1]
+      when: 
+        - ansible_facts['os_family'] in ['Redhat','Debian', 'Suse', 'AlmaLinux', 'RedHat' ]
+    
+    - name: "[ Linux ] Consultar el Uptime de La maquina"
+      ansible.builtin.script: files/getUptime.sh
+      args:
+        executable: /bin/bash
+      register: uptime_result
+      failed_when: false
+      changed_when: uptime_result.rc in [0, 1]
+      when: 
+        - ansible_facts['os_family'] in ['Redhat','Debian', 'Suse', 'AlmaLinux', 'RedHat' ]
+
+    - name: "[ Linux ] Crear Diccionario de Informacion General"
+      set_fact:
+        general_info: 
+          'IP': "{{ ansible_host }}"
+          'SO': "{{ ansible_os_family + ansible_distribution_version }}"
+          'KERNEL': "{{ ansible_kernel }}"
+          'ARCH': "{{ ansible_architecture }}"
+          'CPU': "{{ ansible_processor_cores }}"
+          'MEM': "{{ ansible_memtotal_mb }}"
+          'TIPO': "{{ tiposervidor_result.stdout | replace('\n', '')}}"
+          'UUID': "{{ serial_result.stdout  | replace('\n', '') | replace(' ', '')}}"
+          'MODEL': "{{ model_result.stdout | replace('\n', '') }}"
+          'UPTIME': "{{ uptime_result.stdout | replace('\n', '') }}"
+      when:
+        - ansible_facts['os_family'] in ['Redhat','Debian', 'Suse', 'AlmaLinux', 'RedHat' ]
+            
+        
+    - name: "[ Solaris ] Consultar si la Maquina es Fisica o Virtual"
+      ansible.builtin.script: files/getServerType.sh solaris
+      args:
+        executable: /bin/bash
+      register: tiposervidor_result
+      failed_when: false
+      changed_when: tiposervidor_result.rc in [0, 1]
+      when: 
+        - ansible_facts['os_family'] == 'Solaris' 
+
+    
+    - name: "[ Solaris ] Consultar el Serial de La maquina"
+      ansible.builtin.script: files/getSerial.sh solaris
+      args:
+        executable: /bin/bash
+      register: serial_result
+      failed_when: false
+      changed_when: serial_result.rc in [0, 1]
+      when: 
+        - ansible_facts['os_family'] == 'Solaris'
+
+    - name: "[ Solaris ] Consultar el Modelo de La maquina"
+      ansible.builtin.script: files/getModelServer.sh solaris
+      args:
+        executable: /bin/bash
+      register: model_result
+      failed_when: false
+      changed_when: model_result.rc in [0, 1]
+      when: 
+        - ansible_facts['os_family'] == 'Solaris'
+
+    - name: "[ Solaris ] Consultar Kernel Solaris"
+      ansible.builtin.shell: "pkg info entire | awk '/Branch:/ {print $2}'"
+      register: kernel_result
+      failed_when: false
+      changed_when: kernel_result.rc in [0, 1]
+      when: 
+        - ansible_facts['os_family'] == 'Solaris'
+    
+    - name: "[ Solaris ] Consultar el Uptime de La maquina"
+      ansible.builtin.script: files/getUptime.sh
+      args:
+        executable: /bin/bash
+      register: uptime_result
+      failed_when: false
+      changed_when: uptime_result.rc in [0, 1]
+      when: 
+        - ansible_facts['os_family'] == 'Solaris'
+    
+    - name: "[ Solaris ] Crear Diccionario de Informacion General"
+      set_fact:
+        general_info: 
+          'IP': "{{ ansible_host }}"
+          'SO': "{{ ansible_os_family + ansible_distribution_version }}"
+          'KERNEL': "{{ kernel_result.stdout | replace('\n', '') }}"
+          'ARCH': "{{ ansible_architecture }}"
+          'CPU': "{{ ansible_processor_cores }}"
+          'MEM': "{{ ansible_memtotal_mb }}"
+          'TIPO': "{{ tiposervidor_result.stdout | replace('\n', '') }}"
+          'UUID': "{{ serial_result.stdout | replace('\n', '') | replace(' ', '') }}"
+          'MODEL': "{{ model_result.stdout | replace('\n', '') }}"
+          'UPTIME': "{{ uptime_result.stdout | replace('\n', '') }}"
+      when:
+        - ansible_facts['os_family'] == 'Solaris'
+
+    - name: "[ AIX ] Consultar si la Maquina es Fisica o Virtual"
+      ansible.builtin.script: files/getServerType.sh aix  
+      args:
+        executable: /bin/bash
+      register: tiposervidor_result
+      failed_when: false
+      changed_when: tiposervidor_result.rc in [0, 1]
+      when: 
+        - ansible_facts['os_family'] == 'AIX'
+
+    - name: "[ AIX ] Consultar el Serial de La maquina"
+      ansible.builtin.script: files/getSerial.sh aix
+      args:
+        executable: /bin/bash
+      register: serial_result
+      failed_when: false
+      changed_when: serial_result.rc in [0, 1]
+      when: 
+        - ansible_facts['os_family'] == 'AIX'
+
+    - name: "[ AIX ] Consultar el Modelo de La maquina"
+      ansible.builtin.script: files/getModelServer.sh aix
+      args:
+        executable: /bin/bash
+      register: model_result
+      failed_when: false
+      changed_when: model_result.rc in [0, 1]
+      when: 
+        - ansible_facts['os_family'] == 'AIX'
+    
+    - name: "[ AIX ] Consultar el Uptime de La maquina"
+      ansible.builtin.script: files/getUptime.sh
+      args:
+        executable: /bin/bash
+      register: uptime_result
+      failed_when: false
+      changed_when: uptime_result.rc in [0, 1]
+      when: 
+        - ansible_facts['os_family'] == 'AIX'
+
+    - name: "[ AIX ] Crear Diccionario de Informacion General"
+      set_fact:
+        general_info: 
+          'IP': "{{ ansible_host }}"
+          'SO': "{{ ansible_os_family + ansible_distribution_version }}"
+          'KERNEL': "{{ ansible_kernel }}"
+          'ARCH': "{{ ansible_architecture }}"
+          'CPU': "{{ ansible_processor_cores }}"
+          'MEM': "{{ ansible_memtotal_mb }}"
+          'TIPO': "{{ tiposervidor_result.stdout | replace('\n', '')}}"
+          'UUID': "{{ serial_result.stdout  | replace('\n', '') | replace(' ', '')}}"
+          'MODEL': "{{ model_result.stdout | replace('\n', '') }}"
+          'UPTIME': "{{ uptime_result.stdout | replace('\n', '') }}"
+      when:
+        - ansible_facts['os_family'] == 'AIX'
+
+    - name: Actualizar información general en MySQL
+      delegate_to: bastion.local.com
+      community.mysql.mysql_query:
+        login_host: "{{ mysql_host }}"
+        login_user: "{{ mysql_user }}"
+        login_password: "{{ mysql_password }}"
+        login_db: "{{ mysql_db }}"
+        query: |
+            UPDATE reporte_detalle
+            SET
+              `os` = '{{ general_info.SO }}',
+              `cpu` = '{{ general_info.CPU }}',
+              `tipo_servidor` = '{{ general_info.TIPO }}',
+              `kernel` = '{{ general_info.KERNEL }}',
+              `memoria` = '{{ general_info.MEM }}',
+              `modelo` = '{{ general_info.MODEL }}',
+              `ip` = '{{ general_info.IP }}',
+              `arquitectura` = '{{ general_info.ARCH }}',
+              `serial` = '{{ general_info.UUID }}',
+              `uptime` = '{{ general_info.UPTIME }}'
+            WHERE `cambio` = '{{ cambio }}'
+              AND `hostname` = '{{ inventory_hostname }}';
+
+  when: inventory_hostname != "bastion.local.com"
+  tags:
+    - primera
+    - segunda
+
+- name: Generar Archivo con Cabezera
+  delegate_to: bastion.local.com
+  ansible.builtin.template:
+    src:  header.j2
+    dest: "{{ dest_infoprepos }}/{{ cambio }}/reporte_inicial/header_{{ inventory_hostname }}"
+    mode: '0644'
+  when: inventory_hostname != "bastion.local.com"
+  vars: 
+    general_info: "{{ general_info }}"
+  tags:
+    - primera
+
+- name: Generar Archivo con Cabezera
+  delegate_to: bastion.local.com
+  ansible.builtin.template:
+    src:  header.j2
+    dest: "{{ dest_infoprepos }}/{{ cambio }}/diff/header_{{ inventory_hostname }}"
+    mode: '0644'
+  when: inventory_hostname != "bastion.local.com"
+  vars: 
+    general_info: "{{ general_info }}"
+  tags:
+    - segunda
+
+- name: Generar Archivo con Cabezera
+  delegate_to: bastion.local.com
+  ansible.builtin.template:
+    src:  header.j2
+    dest: "{{ dest_infoprepos }}/{{ cambio }}/reporte_final/header_{{ inventory_hostname }}"
+    mode: '0644'
+  when: inventory_hostname != "bastion.local.com"
+  vars: 
+    general_info: "{{ general_info }}"
+  tags:
+    - segunda

@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Reporte Inicial de Configuraciones</title>
+    <meta charset="UTF-8">
+    <style>
+        :root {
+            --primary-color: #0366d6;
+            --sidebar-width: 250px;
+            --border-color: #e1e4e8;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            color: #24292e;
+        }
+        #sidebar {
+            width: var(--sidebar-width);
+            background-color: #f6f8fa;
+            border-right: 1px solid var(--border-color);
+            height: 100vh;
+            overflow-y: auto;
+            position: fixed;
+        }
+        #content {
+            margin-left: var(--sidebar-width);
+            padding: 20px;
+            flex-grow: 1;
+        }
+        .server-item {
+            padding: 10px 15px;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+        }
+        .server-item:hover {
+            background-color: #e1e4e8;
+        }
+        .server-item.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        .config-container {
+            display: none;
+            margin-bottom: 30px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            overflow: hidden;
+            text-align: left;
+        }
+        .config-container.active {
+            display: block;
+        }
+        .config-header {
+            background-color: #f6f8fa;
+            padding: 8px 16px;
+            border-bottom: 1px solid var(--border-color);
+            font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+        }
+        .config-line {
+            font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+            white-space: nowrap;        /* Evita saltos de línea */
+            margin: 0;
+            padding: 0 16px;
+            line-height: 1.3;
+            text-align: left;
+            display: block;
+            overflow-x: auto;           /* Permite desplazamiento horizontal si el contenido es muy ancho */
+            tab-size: 4;                /* Tamaño consistente para tabs */
+            text-indent: 0;             /* Elimina la indentación */
+            padding-left: 16px;         /* Ajusta el espacio a la izquierda */
+        }
+        .file-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 10px;
+        }
+        .file-tab {
+            padding: 5px 10px;
+            margin-right: 5px;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+        .file-tab:hover {
+            border-color: var(--border-color);
+        }
+        .file-tab.active {
+            border-color: var(--border-color);
+            border-bottom-color: white;
+            margin-bottom: -1px;
+        }
+        .file-content {
+            display: none;
+            max-width: 100%;
+            background-color: white;
+            border-radius: 0 0 6px 6px;
+        }
+        .file-content.active {
+            display: block;
+        }
+        h1 {
+            margin-top: 0;
+        }
+        .timestamp {
+            color: #586069;
+            margin-bottom: 20px;
+        }
+        .error-message {
+            background-color: #ffebee;
+            padding: 15px;
+            border-radius: 4px;
+            text-align: center;
+            margin: 20px 0;
+            color: #c62828;
+        }
+        .line-number {
+           color: rgba(27, 31, 35, 0.3);
+           display: inline-block;
+           width: 40px;
+           text-align: right;
+           padding-right: 8px;
+           user-select: none;
+           vertical-align: top;     /* Alinea con la primera línea del texto */
+        }
+    </style>
+</head>
+<body>
+    <div id="sidebar">
+        <h3 style="padding: 15px; margin: 0; border-bottom: 1px solid var(--border-color);">Servidores</h3>
+        {% for host in play_hosts if host != "bastion.local.com" %}
+            <div class="server-item" onclick="showServer('{{ host }}')">
+                {{ host }}
+                <span style="float: right; color: #0366d6;">✓</span>
+            </div>
+        {% endfor %}
+    </div>
+
+    <div id="content">
+        <h1>Reporte Inicial de Configuraciones</h1>
+        <div class="timestamp">Generado el: {{ ansible_date_time.date }} {{ ansible_date_time.time }}</div>
+        <div class="timestamp">Generado por: {{ tower_user_name }} </div>
+        <div class="timestamp">Titulo del Cambio: {{ titulo_cambio }}</div>
+        
+
+        {% for host in play_hosts if host != "bastion.local.com" %}
+
+         
+            <div id="{{ host }}" class="config-container">  
+            
+                <h2>{{ host }}</h2>
+
+                <div style="border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; background-color: #f6f8fa; font-size: 14px; text-align: left;">
+                     <table style="border-collapse: collapse; width: 100%;">
+                       <tr>
+                            <td style="font-weight: bold; padding: 4px;">OS:</td>
+                            <td style="padding: 4px;">{{ hostvars[host].ansible_distribution }} {{ hostvars[host].ansible_distribution_version }}</td>
+                            <td style="font-weight: bold; padding: 4px; width: 20%;">CPU:</td>
+                            <td style="padding: 4px;">
+                                 {% if  hostvars[host].ansible_processor_vcpus is defined %}
+                                        {{ hostvars[host].ansible_processor_vcpus }} vCPUs
+                                 {% else %}
+                                      {{ hostvars[host].ansible_processor_cores }} vCPUs
+                                 {% endif %} </td>
+                            <td style="font-weight: bold; padding: 4px; width: 20%;">Tipo de Servidor:</td>
+                            <td style="padding: 4px;">
+                                 {% if hostvars[host].ansible_virtualization_role == 'guest' %}
+                                     {{ hostvars[host].ansible_virtualization_type | default('Virtual') }}
+                                 {% else %}
+                                    Fisico
+                                 {% endif %} </td>
+                        </tr>
+                        <tr>
+                            <td style="font-weight: bold; padding: 4px;">Kernel:</td>
+                            <td style="padding: 4px;">{{ hostvars[host].ansible_kernel }}</td>
+                            <td style="font-weight: bold; padding: 4px;">Memoria:</td>
+                            <td style="padding: 4px;">{{ (hostvars[host].ansible_memtotal_mb / 1024) | round(1) }} GB</td>
+                            <td style="font-weight: bold; padding: 4px;">Modelo Servidor:</td>
+                            <td style="padding: 4px;">{{ hostvars[host].ansible_product_name }} </td>
+                        </tr>
+                        <tr>
+                            <td style="font-weight: bold; padding: 4px;">IP:</td>
+                            <td style="padding: 4px;">{{ hostvars[host].ansible_host }}</td>
+                            <td style="font-weight: bold; padding: 4px;">Arquitectura:</td>
+                            <td style="padding: 4px;">{{ hostvars[host].ansible_architecture }}</td>
+                            <td style="font-weight: bold; padding: 4px;">Serial:</td>
+                            <td style="padding: 4px;">
+                                {% if hostvars[host].ansible_product_uuid is defined  %}
+                                    {{ hostvars[host].ansible_product_uuid }}
+                                {% else %} 
+                                   {{ hostvars[host].ansible_machine_id | default('No trae') }}
+                                {% endif %} </td>
+                        </tr>
+                     </table>
+                </div>
+        
+                <div class="file-tabs">
+                    <div class="file-tab active" onclick="showFile('{{ host }}', 'filesystems')">Filesystems</div>
+                    <div class="file-tab active" onclick="showFile('{{ host }}', 'osversion')">OS Version</div>
+                    <div class="file-tab active" onclick="showFile('{{ host }}', 'discos_fisicos')">Discos Fisicos</div>
+                    <div class="file-tab active" onclick="showFile('{{ host }}', 'volumenes_logicos')">Volumenes Logicos</div>
+                    <div class="file-tab active" onclick="showFile('{{ host }}', 'rutas')">Rutas</div>
+                    <div class="file-tab active" onclick="showFile('{{ host }}', 'networks')">Redes</div>
+                    <div class="file-tab active" onclick="showFile('{{ host }}', 'recursos')">Recursos</div>
+                    <div class="file-tab active" onclick="showFile('{{ host }}', 'puertos')">Puertos</div>
+                    <div class="file-tab active" onclick="showFile('{{ host }}', 'nameservers')">Nameservers</div>
+                    <div class="file-tab active" onclick="showFile('{{ host }}', 'hbas')">HBAs</div>
+                    <div class="file-tab active" onclick="showFile('{{ host }}', 'multipath')">Multipath</div>
+                </div>
+        
+                
+                <div id="{{ host }}_filesystems" class="file-content">
+                    {% set filesystems_data = hostvars_filesystems.get(host, {}).get('filesystems_content', {}) %}
+                    {% if filesystems_data.content is defined %}
+                        {% set filesystems_output = filesystems_data.content %}
+                        <div class="config-header">Filesystems</div>
+                        {% for line in filesystems_output.split('\n') %}
+                            <div class="config-line">
+                                <span class="line-number">{{ loop.index }}</span>{{ line }}
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="error-message">
+                            No se encontraron datos
+                        </div>
+                    {% endif %}
+                </div>
+
+                
+                <div id="{{ host }}_osversion" class="file-content">
+                    {% set osversion_data = hostvars_osversion.get(host, {}).get('osversion_content', {}) %}
+                    {% if osversion_data.content is defined %}
+                        {% set osversion_output = osversion_data.content  %}
+                        <div class="config-header">Información del Sistema Operativo</div>
+                        {% for line in osversion_output.split('\n') %}
+                            <div class="config-line">
+                                <span class="line-number">{{ loop.index }}</span>{{ line }}
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="error-message">
+                            No se encontraron datos
+                        </div>
+                    {% endif %}
+                </div>
+
+                
+                <div id="{{ host }}_discos_fisicos" class="file-content">
+                    {% set discos_fisicos_data = hostvars_discos_fisicos.get(host, {}).get('discos_fisicos_content', {}) %}
+                    {% if discos_fisicos_data.content is defined %}
+                        {% set discos_fisicos_output = discos_fisicos_data.content  %}
+                        <div class="config-header">Información de Bloques (lsblk)</div>
+                        {% for line in discos_fisicos_output.split('\n') %}
+                            <div class="config-line">
+                                <span class="line-number">{{ loop.index }}</span>{{ line }}
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="error-message">
+                            No se encontraron datos
+                        </div>
+                    {% endif %}
+                </div>
+
+                
+                <div id="{{ host }}_volumenes_logicos" class="file-content">
+                    {% set volumenes_logicos_data = hostvars_volumenes_logicos.get(host, {}).get('volumenes_logicos_content', {}) %}
+                    {% if volumenes_logicos_data.content is defined %}
+                        {% set volumenes_logicos_output = volumenes_logicos_data.content  %}
+                        <div class="config-header">Volumenes Logicos</div>
+                        {% for line in volumenes_logicos_output.split('\n') %}
+                            <div class="config-line">
+                                <span class="line-number">{{ loop.index }}</span>{{ line }}
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="error-message">
+                            No se encontraron datos
+                        </div>
+                    {% endif %}
+                </div>
+
+                
+                <div id="{{ host }}_networks" class="file-content">
+                    {% set networks_data = hostvars_networks.get(host, {}).get('networks_content', {}) %}
+                    {% if networks_data.content is defined %}
+                        {% set networks_output = networks_data.content  %}
+                        <div class="config-header">Información de Red</div>
+                        {% for line in networks_output.split('\n') %}
+                            <div class="config-line">
+                                <span class="line-number">{{ loop.index }}</span>{{ line }}
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="error-message">
+                            No se encontraron datos
+                        </div>
+                    {% endif %}
+                </div>
+
+                
+                <div id="{{ host }}_rutas" class="file-content">
+                    {% set rutas_data = hostvars_rutas.get(host, {}).get('rutas_content', {}) %}
+                    {% if rutas_data.content is defined %}
+                        {% set rutas_output = rutas_data.content  %}
+                        <div class="config-header">Información de Rutas</div>
+                        {% for line in rutas_output.split('\n') %}
+                            <div class="config-line">
+                                <span class="line-number">{{ loop.index }}</span>{{ line }}
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="error-message">
+                            No se encontraron datos
+                        </div>
+                    {% endif %}
+                </div>
+
+                
+                <div id="{{ host }}_recursos" class="file-content">
+                    {% set recursos_data = hostvars_recursos.get(host, {}).get('recursos_content', {}) %}
+                    {% if recursos_data.content is defined %}
+                        {% set recursos_output = recursos_data.content  %}
+                        <div class="config-header">Información de Recursos</div>
+                        {% for line in recursos_output.split('\n') %}
+                            <div class="config-line">
+                                <span class="line-number">{{ loop.index }}</span>{{ line }}
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="error-message">
+                            No se encontraron datos
+                        </div>
+                    {% endif %}
+                </div>
+
+                
+                <div id="{{ host }}_puertos" class="file-content">
+                    {% set puertos_data = hostvars_puertos.get(host, {}).get('puertos_content', {}) %}
+                    {% if puertos_data.content is defined %}
+                        {% set puertos_output = puertos_data.content  %}
+                        <div class="config-header">Información de Puertos</div>
+                        {% for line in puertos_output.split('\n') %}
+                            <div class="config-line">
+                                <span class="line-number">{{ loop.index }}</span>{{ line }}
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="error-message">
+                            No se encontraron datos
+                        </div>
+                    {% endif %}
+                </div>
+
+                
+                <div id="{{ host }}_nameservers" class="file-content">
+                    {% set nameservers_data = hostvars_nameservers.get(host, {}).get('nameservers_content', {}) %}
+                    {% if nameservers_data.content is defined %}
+                        {% set nameservers_output = nameservers_data.content  %}
+                        <div class="config-header">Información de Nameservers</div>
+                        {% for line in nameservers_output.split('\n') %}
+                            <div class="config-line">
+                                <span class="line-number">{{ loop.index }}</span>{{ line }}
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="error-message">
+                            No se encontraron datos
+                        </div>
+                    {% endif %}
+                </div>
+
+
+                <div id="{{ host }}_hba" class="file-content">
+                    {% set hba_data = hostvars_hba.get(host, {}).get('hba_content', {}) %}
+                    {% if hba_data.content is defined %}
+                        {% set hba_output = hba_data.content  %}
+                        <div class="config-header">Información de HBA</div>
+                        {% for line in hba_output.split('\n') %}
+                            <div class="config-line">
+                                <span class="line-number">{{ loop.index }}</span>{{ line }}
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="error-message">
+                            No se encontraron datos
+                        </div>
+                    {% endif %}
+                </div>
+
+
+                
+                <div id="{{ host }}_multipath" class="file-content">
+                    {% set multipath_data = hostvars_multipath.get(host, {}).get('multipath_content', {}) %}
+                    {% if multipath_data.content is defined %}
+                        {% set multipath_output = multipath_data.content  %}
+                        <div class="config-header">Información de multipath</div>
+                        {% for line in multipath_output.split('\n') %}
+                            <div class="config-line">
+                                <span class="line-number">{{ loop.index }}</span>{{ line }}
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="error-message">
+                            No se encontraron datos
+                        </div>
+                    {% endif %}
+                </div>
+
+            </div>
+        {% endfor %}
+    </div>
+
+    <script>
+        // Mostrar el primer servidor por defecto
+        document.addEventListener('DOMContentLoaded', function() {
+            const firstServer = document.querySelector('.server-item');
+            if (firstServer) {
+                const hostId = firstServer.textContent.trim().replace(/[✓]/g, '').trim();
+                showServer(hostId);
+            }
+        });
+
+        function showServer(host) {
+            // Actualizar menú lateral
+            document.querySelectorAll('.server-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.textContent.includes(host)) {
+                    item.classList.add('active');
+                }
+            });
+            
+            // Mostrar contenido del servidor seleccionado
+            document.querySelectorAll('.config-container').forEach(container => {
+                container.classList.remove('active');
+            });
+            document.getElementById(host).classList.add('active');
+        }
+
+        function showFile(host, file) {
+            // Actualizar pestañas
+            const tabs = document.querySelectorAll(`#${host} .file-tab`);
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            // Mostrar contenido del archivo seleccionado
+            const contents = document.querySelectorAll(`#${host} .file-content`);
+            contents.forEach(content => content.classList.remove('active'));
+            
+            document.querySelector(`#${host} .file-tab[onclick*="${file}"]`).classList.add('active');
+            document.getElementById(`${host}_${file}`).classList.add('active');
+        }
+    </script>
+</body>
+</html>

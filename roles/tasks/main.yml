@@ -1,0 +1,7 @@
+---
+- name: Preparar Entorno de Ruster
+  import_tasks: preparar_ruster.yml
+
+- name: Obtener Headers
+  import_tasks: get_headers.yml
+

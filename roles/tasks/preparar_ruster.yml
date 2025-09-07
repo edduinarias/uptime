@@ -1,0 +1,58 @@
+---
+- name: Obtener facts estrictamente necesarios
+  ansible.builtin.setup:
+    gather_subset:
+      - 'all'
+      - 'min'
+    filter: 
+      - ansible_date_time
+      - ansible_distribution
+      - ansible_distribution_version
+      - ansible_kernel
+      - ansible_default_ipv4.address
+      - ansible_hostname
+      - ansible_processor_vcpus
+      - ansible_memtotal_mb
+      - ansible_architecture
+      - ansible_virtualization_role
+      - ansible_product_name
+      - ansible_product_uuid
+      - ansible_os_family
+      - ansible_processor_cores
+      - ansible_machine_id
+      - ansible_dns
+      - ansible_distribution_major_version
+  timeout: 120
+  ignore_unreachable: yes
+  register: setup_facts_result
+  tags:
+    - primera
+    - segunda
+
+- name: Finalizar ejecución para hosts fallidos (unreachable o timeout)
+  ansible.builtin.meta: end_host
+  when: setup_facts_result.unreachable is defined and setup_facts_result.unreachable
+  tags:
+    - primera
+    - segunda
+
+- name: Definir current_time global
+  set_fact:
+    current_time: "{{ ansible_date_time.iso8601 | regex_replace('T', ' ') | regex_replace('Z$', '') | regex_replace('\\..*', '') }}"  
+  run_once: true  
+  tags:
+    - primera
+    - segunda
+
+- name: "[ Ejecucion: 1 ] Creando el registro en DB Mysql"
+  when: inventory_hostname != "bastion.local.com"
+  delegate_to: bastion.local.com
+  community.mysql.mysql_query:
+     login_host: "{{ mysql_host }}"
+     login_user: "{{ mysql_user }}"
+     login_password: "{{ mysql_password }}"
+     login_db: "{{ mysql_db }}"
+     query: |
+          INSERT INTO `registro` (`fecha`,`hostname`) VALUES ('{{ current_time }}','{{ inventory_hostname }}');
+  tags:
+    - primera

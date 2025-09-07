@@ -1,0 +1,84 @@
+---
+- name: Obtener uptime en minutos en Linux, Solaris y AIX
+  hosts: all
+  gather_facts: yes
+  tasks:
+
+    - name: Ejecutar script getUptime.sh
+      ansible.builtin.script: files/getUptime.sh
+      args:
+        executable: /bin/bash
+      register: uptime_result
+      failed_when: false
+      changed_when: false
+      when: ansible_facts['os_family'] in ['Redhat', 'Debian', 'Suse', 'Solaris', 'AIX']
+
+    - name: Normalizar texto uptime
+      set_fact:
+        uptime_texto_normalizado: "{{ uptime_result.stdout | lower | replace('\r', '') | replace('\n', '') | trim }}"
+      when: uptime_result.stdout is defined
+
+    - name: Extraer días del uptime
+      set_fact:
+        uptime_dias: "{{ uptime_texto_normalizado | regex_search('\\b(\\d+)\\s*(dia|dias|day|days)\\b', '\\1') | default('0') | int }}"
+      when: uptime_texto_normalizado is defined
+
+    - name: Extraer horas del uptime
+      set_fact:
+        uptime_horas: "{{ uptime_texto_normalizado | regex_search('\\b(\\d+)\\s*(hora|horas|hour|hrs)\\b', '\\1') | default('0') | int }}"
+      when: uptime_texto_normalizado is defined
+
+    - name: Extraer minutos del uptime
+      set_fact:
+        uptime_minutos: "{{ uptime_texto_normalizado | regex_search('\\b(\\d+)\\s*(minuto|minutos|min|mins)\\b', '\\1') | default('0') | int }}"
+      when: uptime_texto_normalizado is defined
+
+    - name: Extraer formato HH:MM si existe
+      set_fact:
+        hhmm_match: "{{ uptime_texto_normalizado | regex_search('(\\d+):(\\d+)', '\\0') }}"
+      when: uptime_texto_normalizado is defined
+
+    - name: Calcular uptime total en minutos (formato HH:MM)
+      set_fact:
+        uptime_total_minutos: >-
+          {% set partes = hhmm_match.split(':') %}
+          {{ (partes[0] | int) * 60 + (partes[1] | int) }}
+      when: hhmm_match is defined and hhmm_match != ''
+
+    - name: Calcular uptime total en minutos (formato texto con días, horas y minutos)
+      set_fact:
+        uptime_total_minutos: "{{ (uptime_dias * 1440) + (uptime_horas * 60) + uptime_minutos }}"
+      when: hhmm_match is not defined or hhmm_match == ''
+
+    - name: Mostrar uptime original y total en minutos
+      debug:
+        msg:
+          - "Uptime original: {{ uptime_result.stdout | default('No disponible') }}"
+          - "Uptime total en minutos: {{ uptime_total_minutos | default('No calculado') }}"
+
+    - name: Actualizar información general en MySQL
+      delegate_to: bastion.local.com
+      community.mysql.mysql_query:
+        login_host: "{{ mysql_host }}"
+        login_user: "{{ mysql_user }}"
+        login_password: "{{ mysql_password }}"
+        login_db: "{{ mysql_db }}"
+        query: |
+            UPDATE registro
+            SET
+              `os` = '{{ general_info.SO }}',
+              `cpu` = '{{ general_info.CPU }}',
+              `tipo_servidor` = '{{ general_info.TIPO }}',
+              `kernel` = '{{ general_info.KERNEL }}',
+              `memoria` = '{{ general_info.MEM }}',
+              `modelo` = '{{ general_info.MODEL }}',
+              `ip` = '{{ general_info.IP }}',
+              `arquitectura` = '{{ general_info.ARCH }}',
+              `serial` = '{{ general_info.UUID }}',
+              `uptime` = '{{ general_info.UPTIME }}'
+            WHERE `fecha` = '{{ current_time }}'
+              AND `hostname` = '{{ inventory_hostname }}';
+  when: inventory_hostname != "bastion.local.com"
+  tags:
+    - primera
+    - segunda

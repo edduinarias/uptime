@@ -1,0 +1,50 @@
+---
+# Definicion de Variables a utilizar.
+
+# Variables para envio de Correo
+email_host: 172.22.88.6
+email_from: unix@telmexla.net.co
+email_port: 25
+email_to: # Debe declararse en el Survey / Variable en Template 
+email_cc: # Debe declararse en el Survey / Variable en Template
+
+
+#Variables que se documentan desde el Survey
+detalle_cambio:  # Debe declararse en el Survey / Variable en Template
+ncambio:         # Debe declararse en el Survey / Variable en Template
+
+dest_infoprepos: "/InfoPrePos"
+dest_backup: "/InfoPrePos"
+
+
+
+servidores: # Debe declararse en el Survey / Variable en Template
+cambio: "{{ ncambio | trim | upper }}" 
+titulo_cambio: "{{ cambio }} - {{ detalle_cambio | upper | replace('Á', 'A') |
+                                                           replace('É', 'E') | 
+                                                           replace('Í', 'I') | 
+                                                           replace('Ó', 'O') | 
+                                                           replace('Ú', 'U')  }}"
+
+
+linux_files: 
+   - "/etc/*"
+   - "/var/spool/cron/*"
+  
+solaris_files: 
+   - "/etc/*"
+   - "/var/spool/cron/*"
+
+aix_files: 
+   - "/etc/*"
+   - "/var/spool/cron/*"
+
+mysql_host: "localhost"
+mysql_user: "root"
+mysql_password: "Winner2020"
+mysql_db: "uptime"
+tabla: "registro"
+nombre: "Juan Perez"
+email: "juan.perez@example.com"
+grupoadmin: "admtmx"
+controllerserver: "bastion.local.com"
