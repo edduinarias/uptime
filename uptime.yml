@@ -1,6 +1,8 @@
 ---
 - name: Obtener uptime en minutos en Linux, Solaris y AIX
   hosts: all
+  collections:
+    - community.mysql
   gather_facts: yes
   vars:
     mysql_host: "localhost"
