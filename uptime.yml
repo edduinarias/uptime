@@ -112,7 +112,7 @@
 
     - name: Actualizar información general en MySQL
       delegate_to: bastion.local.com
-      community.mysql.mysql_query:
+      community.mysql.mysql_db:
         login_host: "{{ mysql_host }}"
         login_user: "{{ mysql_user }}"
         login_password: "{{ mysql_password }}"
