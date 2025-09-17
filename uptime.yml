@@ -1,11 +1,9 @@
 ---
 - name: Obtener uptime en minutos en Linux, Solaris y AIX
   hosts: all
-  collections:
-    - community.mysql
   gather_facts: yes
   vars:
-    mysql_host: "localhost"
+    mysql_host: "192.168.1.129"
     mysql_user: "root"
     mysql_password: "Winner2020"
     mysql_db: "uptime"
@@ -32,7 +30,7 @@
 
     - name: Crear Registro en la DB MySQL
       delegate_to: bastion.local.com
-      community.mysql.mysql_db:
+      community.mysql.mysql_query:
         login_host: "{{ mysql_host }}"
         login_user: "{{ mysql_user }}"
         login_password: "{{ mysql_password }}"
@@ -112,7 +110,7 @@
 
     - name: Actualizar información general en MySQL
       delegate_to: bastion.local.com
-      community.mysql.mysql_db:
+      community.mysql.mysql_query:
         login_host: "{{ mysql_host }}"
         login_user: "{{ mysql_user }}"
         login_password: "{{ mysql_password }}"
