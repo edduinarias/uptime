@@ -44,6 +44,7 @@
     - name: Definir tipo de sistema operativo
       set_fact:
         os_type: "{{ os_type_map[ansible_facts['os_family']] | default('unsupported') }}"
+      when: ansible_os_family is defined  
 
     - name: Verificar si el sistema operativo es soportado
       fail:
