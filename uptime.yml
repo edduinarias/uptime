@@ -23,6 +23,16 @@
 
   tasks:
 
+    - name: Verificar si el host está accesible
+      ping:
+      register: ping_result
+      ignore_unreachable: yes
+      ignore_errors: yes
+
+    - name: Saltar host si no responde al ping
+      meta: end_host
+      when: ping_result is failed or ping_result.unreachable is defined
+      
     - name: Definir fecha y hora actual en formato MySQL
       set_fact:
         current_time: "{{ lookup('pipe', 'date +\"%Y-%m-%d %H:%M:%S\"') }}"
