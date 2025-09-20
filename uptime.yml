@@ -50,8 +50,8 @@
       fail:
         msg: "Sistema operativo no soportado: {{ ansible_facts['os_family'] }}"
       when: 
-        - os_type == 'unsupported'
         - ansible_os_family is defined
+        - os_type == 'unsupported'
 
     - name: Consultar si la Máquina es Física o Virtual
       ansible.builtin.script: "files/getServerType.sh {{ os_type }}"
