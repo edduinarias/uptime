@@ -1,44 +1,27 @@
 ---
-- name: Obtener uptime en minutos en Linux, Solaris y AIX
+- name: Registrar uptime de sistemas Linux, HPUX, AIX y Solaris
   hosts: all
-  gather_facts: yes
-  ignore_unreachable: yes
+  gather_facts: false
+  become: false
   vars:
-    mysql_host: "192.168.1.129"
+    uptime_dir: "./uptimes"
+    uptime_dir2: "./uptimes2"
+    ansible_ssh_timeout: 4    
+    mysql_host: "localhost"
     mysql_user: "root"
     mysql_password: "Winner2020"
     mysql_db: "uptime"
     tabla: "registro"
-    nombre: "Juan Perez"
-    email: "juan.perez@example.com"
     grupoadmin: "admtmx"
-    controllerserver: "bastion.local.com"
-    os_type_map:
-      RedHat: linux
-      Debian: linux
-      Suse: linux
-      AlmaLinux: linux
-      Solaris: solaris
-      AIX: aix
+    controllerserver: "bastion.local.com"    
 
   tasks:
-
-    - name: Verificar si el host está accesible
-      ping:
-      register: ping_result
-      ignore_unreachable: yes
-      ignore_errors: yes
-
-    - name: Saltar host si no responde al ping
-      meta: end_host
-      when: ping_result is failed or ping_result.unreachable is defined
-      
     - name: Definir fecha y hora actual en formato MySQL
       set_fact:
         current_time: "{{ lookup('pipe', 'date +\"%Y-%m-%d %H:%M:%S\"') }}"
       delegate_to: bastion.local.com
       run_once: true
-
+      
     - name: Crear Registro en la DB MySQL
       delegate_to: bastion.local.com
       community.mysql.mysql_query:
@@ -48,78 +31,18 @@
         login_db: "{{ mysql_db }}"
         query: |
           INSERT INTO `registro` (`fecha`, `hostname`) VALUES ('{{ current_time }}', '{{ inventory_hostname }}');
-      when: inventory_hostname != controllerserver
+      when: inventory_hostname != controllerserver  
+
+    - name: Obtener uptime en Linux
+      shell: /usr/bin/awk '{print int($1 / 60)}' /proc/uptime
+      register: result_linux
+      ignore_errors: yes
 
 
-    - name: Definir tipo de sistema operativo
-      set_fact:
-        os_type: "{{ os_type_map[ansible_facts['os_family']] | default('unsupported') }}"
-      when: ansible_os_family is defined  
-
-    - name: Verificar si el sistema operativo es soportado
-      fail:
-        msg: "Sistema operativo no soportado: {{ ansible_facts['os_family'] }}"
-      when: 
-        - ansible_os_family is defined
-        - os_type == 'unsupported'
-
-    - name: Consultar si la Máquina es Física o Virtual
-      ansible.builtin.script: "files/getServerType.sh {{ os_type }}"
-      args:
-        executable: /bin/bash
-      register: tiposervidor_result
-      failed_when: false
-      changed_when: tiposervidor_result.rc in [0, 1]
-
-    - name: Consultar el Serial de la Máquina
-      ansible.builtin.script: "files/getSerial.sh {{ os_type }}"
-      args:
-        executable: /bin/bash
-      register: serial_result
-      failed_when: false
-      changed_when: serial_result.rc in [0, 1]
-
-    - name: Consultar el Modelo de la Máquina
-      ansible.builtin.script: "files/getModelServer.sh {{ os_type }}"
-      args:
-        executable: /bin/bash
-      register: model_result
-      failed_when: false
-      changed_when: model_result.rc in [0, 1]
-
-    - name: Consultar el Uptime de la Máquina
-      ansible.builtin.script: files/getUptime.sh
-      args:
-        executable: /bin/bash
-      register: uptime_result
-      failed_when: false
-      changed_when: uptime_result.rc in [0, 1]
-
-    - name: Consultar Kernel Solaris (solo si es Solaris)
-      ansible.builtin.shell: "pkg info entire | awk '/Branch:/ {print $2}'"
-      register: kernel_result
-      failed_when: false
-      changed_when: kernel_result.rc in [0, 1]
-      when: os_type == 'solaris'
-
-    - name: Definir kernel (genérico o Solaris)
-      set_fact:
-        kernel_value: "{{ kernel_result.stdout | replace('\n', '') if os_type == 'solaris' else ansible_kernel }}"
-
-    - name: Crear Diccionario de Información General
-      set_fact:
-        general_info: 
-          IP: "{{ ansible_host }}"
-          SO: "{{ ansible_os_family + ansible_distribution_version }}"
-          KERNEL: "{{ kernel_value }}"
-          ARCH: "{{ ansible_architecture }}"
-          CPU: "{{ ansible_processor_cores }}"
-          MEM: "{{ ansible_memtotal_mb }}"
-          TIPO: "{{ tiposervidor_result.stdout | replace('\n', '') }}"
-          UUID: "{{ serial_result.stdout | replace('\n', '') | replace(' ', '') }}"
-          MODEL: "{{ model_result.stdout | replace('\n', '') }}"
-          UPTIME: "{{ uptime_result.stdout | replace('\n', '') }}"
-
+    - name: Mostrar resultado de uptime
+      debug:
+        msg: "Uptime de {{ inventory_hostname }}: {{ result_linux.stdout_lines }}"
+      when: result_linux is defined
 
 
     - name: Actualizar información general en MySQL
@@ -132,16 +55,7 @@
         query: |
           UPDATE registro
           SET
-            `os` = '{{ general_info.SO }}',
-            `cpu` = '{{ general_info.CPU }}',
-            `tipo_servidor` = '{{ general_info.TIPO }}',
-            `kernel` = '{{ general_info.KERNEL }}',
-            `memoria` = '{{ general_info.MEM }}',
-            `modelo` = '{{ general_info.MODEL }}',
-            `ip` = '{{ general_info.IP }}',
-            `arquitectura` = '{{ general_info.ARCH }}',
-            `serial` = '{{ general_info.UUID }}',
-            `uptime` = '{{ general_info.UPTIME }}'
+            `uptime` = '{{ result_linux.stdout_lines[0] }}'
           WHERE `fecha` = '{{ current_time }}'
             AND `hostname` = '{{ inventory_hostname }}';
       when: inventory_hostname != controllerserver
